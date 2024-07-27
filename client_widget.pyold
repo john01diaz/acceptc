@@ -1,0 +1,109 @@
+# gui/client_widget.py
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QListWidget, 
+                             QPushButton, QLineEdit, QFormLayout, QMessageBox)
+
+class ClientWidget(QWidget):
+    def __init__(self, db):
+        super().__init__()
+        self.db = db
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QHBoxLayout()
+
+        # Client list
+        self.client_list = QListWidget()
+        self.refresh_client_list()
+        layout.addWidget(self.client_list)
+
+        # Form for adding/editing clients
+        form_layout = QFormLayout()
+        self.name_input = QLineEdit()
+        self.email_input = QLineEdit()
+        self.phone_input = QLineEdit()
+        form_layout.addRow("Name:", self.name_input)
+        form_layout.addRow("Email:", self.email_input)
+        form_layout.addRow("Phone:", self.phone_input)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.add_button = QPushButton("Add Client")
+        self.add_button.clicked.connect(self.add_client)
+        self.edit_button = QPushButton("Edit Client")
+        self.edit_button.clicked.connect(self.edit_client)
+        self.archive_button = QPushButton("Archive Client")
+        self.archive_button.clicked.connect(self.archive_client)
+        self.delete_button = QPushButton("Delete Client")
+        self.delete_button.clicked.connect(self.delete_client)
+        
+        button_layout.addWidget(self.add_button)
+        button_layout.addWidget(self.edit_button)
+        button_layout.addWidget(self.archive_button)
+        button_layout.addWidget(self.delete_button)
+
+        right_layout = QVBoxLayout()
+        right_layout.addLayout(form_layout)
+        right_layout.addLayout(button_layout)
+
+        layout.addLayout(right_layout)
+        self.setLayout(layout)
+
+    def refresh_client_list(self):
+        self.client_list.clear()
+        clients = self.db.get_all_clients()
+        for client in clients:
+            self.client_list.addItem(f"{client[1]} - {client[2]}")
+
+    def add_client(self):
+        name = self.name_input.text()
+        email = self.email_input.text()
+        phone = self.phone_input.text()
+        if name and email:
+            self.db.add_client(name, email, phone)
+            self.refresh_client_list()
+            self.clear_inputs()
+        else:
+            QMessageBox.warning(self, "Input Error", "Name and Email are required.")
+
+    def edit_client(self):
+        selected = self.client_list.currentItem()
+        if selected:
+            client_id = self.db.get_all_clients()[self.client_list.currentRow()][0]
+            name = self.name_input.text()
+            email = self.email_input.text()
+            phone = self.phone_input.text()
+            if name and email:
+                self.db.update_client(client_id, name, email, phone)
+                self.refresh_client_list()
+                self.clear_inputs()
+            else:
+                QMessageBox.warning(self, "Input Error", "Name and Email are required.")
+        else:
+            QMessageBox.warning(self, "Selection Error", "Please select a client to edit.")
+
+    def archive_client(self):
+        selected = self.client_list.currentItem()
+        if selected:
+            client_id = self.db.get_all_clients()[self.client_list.currentRow()][0]
+            self.db.archive_client(client_id)
+            self.refresh_client_list()
+        else:
+            QMessageBox.warning(self, "Selection Error", "Please select a client to archive.")
+
+    def delete_client(self):
+        selected = self.client_list.currentItem()
+        if selected:
+            client_id = self.db.get_all_clients()[self.client_list.currentRow()][0]
+            reply = QMessageBox.question(self, 'Delete Client', 
+                                         'Are you sure you want to delete this client?',
+                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.db.delete_client(client_id)
+                self.refresh_client_list()
+        else:
+            QMessageBox.warning(self, "Selection Error", "Please select a client to delete.")
+
+    def clear_inputs(self):
+        self.name_input.clear()
+        self.email_input.clear()
+        self.phone_input.clear()
